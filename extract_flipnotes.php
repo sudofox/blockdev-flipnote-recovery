@@ -21,23 +21,75 @@ $offsets = findKFHMagic($blockdev);
 
 $extract_count = 0;
 
-foreach($offsets as $offset) {
-    $data = file_get_contents($blockdev, false, NULL, $offset, 3000000);
+foreach ($offsets as $offset) {
+    error_log("Starting extraction at offset $offset");
+    $data = file_get_contents($blockdev, false, NULL, $offset, 10000000);
     $extractor = new kwzExtractor($data);
-    $extractor->fixDataSize();
+
+    try {
+        $extractor->fixDataSize();
+    } catch (TypeError | Exception $e) {
+        error_log("KWZ load failed - " . $e->getMessage());
+        $meta = $extractor->getBareMeta();
+
+        if (!is_dir("./broken")) {
+            error_log("Creating folder: ./broken");
+            mkdir("./broken");
+        }
+
+        $fsid = (isset($meta["current"]["fsid"])) ?  $meta["current"]["fsid"] : null;
+        $filename = (isset($meta["current"]["filename"])) ?  $meta["current"]["filename"] : null;
+
+
+        if (is_null($fsid)) {
+            error_log("Couldn't recover any header data");
+            continue;
+        }
+
+        // Check that we actually have a well-formed kwz filename
+
+        if (!preg_match("/^[cwmfjordvegbalksnthpyxquiz012345]{28}$/", $meta["current"]["filename"])) {
+            error_log("No well-formed filename found, skipping");
+            continue;
+        }
+
+
+        if (!is_dir("./broken/{$fsid}")) {
+            error_log("Creating folder: ./broken/{$fsid}");
+            mkdir("./broken/{$fsid}");
+        }
+
+        $meta["recovery"]["kfh_offset"] = $offset;
+        file_put_contents("./broken/$fsid/{$meta["current"]["filename"]}.json", json_encode($meta, JSON_PRETTY_PRINT));
+
+        // Try to recover embedded JPG frame
+
+        $jpg = $extractor->getEmbeddedJPEG();
+        if (strlen($jpg) > 0) {
+            file_put_contents("./broken/$fsid/{$meta["current"]["filename"]}.jpg", $jpg);
+        }
+        continue;
+    }
+
     $meta = $extractor->getMeta();
 
     $fsid = $meta["current"]["fsid"];
 
-    if (!is_dir("./$fsid")) {
-        error_log("Creating folder: $fsid");
-        mkdir("./$fsid");
+    if (!is_dir("./flipnotes")) {
+        error_log("Creating folder: ./flipnotes");
+        mkdir("./flipnotes");
+    }
+
+    if (!is_dir("./flipnotes/$fsid")) {
+        error_log("Creating folder: ./flipnotes/$fsid");
+        mkdir("./flipnotes/$fsid");
     }
 
     $filename = $meta["current"]["filename"];
 
-    error_log("Extracting ./$fsid/$filename.kwz (" . $extractor->calcFileSize() . ")");
-    file_put_contents("./$fsid/$filename.kwz", $extractor->getFileData());
+    error_log("Extracting ./flipnotes/$fsid/$filename.kwz (" . $extractor->calcFileSize() . ")");
+    file_put_contents("./flipnotes/$fsid/$filename.kwz", $extractor->getFileData());
+    file_put_contents("./flipnotes/$fsid/$filename.json", json_encode($meta, JSON_PRETTY_PRINT));
 
     $extract_count++;
 }

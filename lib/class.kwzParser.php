@@ -378,18 +378,18 @@ EOT;
     return $err;
   }
 
-  private function formatUsername(string $username)
+  protected function formatUsername(string $username)
   {
     return trim(mb_convert_encoding($username, 'UTF-8', 'UTF-16LE'));
   }
 
-  private function formatAuthorId(string $id)
+  protected function formatAuthorId(string $id)
   {
     // Could trim the trailing null byte here, I don't think it's used, but I'm gonna leave it and see if Nintendo surprises us
     return strtoupper($id);
   }
 
-  private function formatFilename(string $filename)
+  protected function formatFilename(string $filename)
   {
     // If filename matches Flipnote Studio's PPM format, unpack it
     if (preg_match('/^[\x{00}-\x{FF}]{3}[A-Fa-f0-9]{13}[\x{00}-\x{FF}]{3}/', $filename)) {
@@ -399,14 +399,14 @@ EOT;
     return $filename;
   }
 
-  private function read(int $nbytes = 1)
+  protected function read(int $nbytes = 1)
   {
     $ret = substr($this->data, $this->offset, $nbytes);
     $this->offset += $nbytes;
     return $ret;
   }
 
-  private function seek(int $offset, int $whence = 0)
+  protected function seek(int $offset, int $whence = 0)
   {
     switch ($whence) {
       case 2:
@@ -422,12 +422,12 @@ EOT;
     }
   }
 
-  private function seekToSection(string $type)
+  protected function seekToSection(string $type)
   {
     $this->seek($this->sections[$type]['offset']);
   }
 
-  private function unpack(array $struct, int $nbytes = 0)
+  protected function unpack(array $struct, int $nbytes = 0)
   {
     $structArr = [];
     foreach ($struct as $name => $type) {
