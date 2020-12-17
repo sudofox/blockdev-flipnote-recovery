@@ -57,6 +57,10 @@ foreach ($data as $fsid => $user) {
 EOD;
 
     foreach ($user as $flipnote) {
+
+        $flipnote["meta"]["modified_date"] = gmdate("Y-m-d H:i:s", $flipnote["meta"]["modified"]) . " GMT";
+        $flipnote["meta"]["created_date"]  = gmdate("Y-m-d H:i:s", $flipnote["meta"]["created"]) . " GMT";
+
         $html .= "<tr><td>";
         if ($flipnote["thumb"]) {
             $html .= "<img src=\"data:image/jpeg;base64," . $flipnote["thumb"] . "\">";
